@@ -21,8 +21,9 @@ MOUSE_COLOR = (255, 255, 255) # Mouse color
 MOUSE_RADIUS = 10 # The radius of the mouse
 
 SPAWN_CHANCE = 0 # This many circles will spawn every second (on average). Initialized here but will be assigned a value later
-SPEED_RANGE = [3, 5] # The range of speeds (in pixels per second) that a circle can travel at
+SPEED_RANGE = [0, 0] # The range of speeds (in pixels per second) that a circle can travel at. Initialized here but will be assigned a value later
 CIRCLE_RADIUS_LIMIT = 5 # A given circles radius is at most this much larger or smaller than the player
+LIFE_LENGTH = 0 # The amount of seconds a given circle will last. Initialized here but will be assigned a value later
 
 FONT = pygame.font.SysFont("futura", 45) # The font and font size used to render text
 TEXT_COLOR = (240, 240, 240) # The text color
@@ -39,10 +40,11 @@ GAME_MODE = -1 # The game mode that the player is in. (0 is easy, 1 is medium, 2
 
 # Definining the enemy class
 class Circle:
-	def __init__(self, radius, mouse):
+	def __init__(self, radius, mouse, timer):
 		self.color = (randint(55, 200), randint(55, 200), randint(55, 200)) # Instead of each value ranging from 0-255, these range from 55-200 in order to contrast them against both the mouse and the black background
 		self.speed = random()*(SPEED_RANGE[1]-SPEED_RANGE[0]) + SPEED_RANGE[0] # Covers the SPEED_RANGE, but uses random() instead of randint() to return a float for more diverse possibilities
 		self.radius = radius
+		self.birth = timer
 
 		# The following if/else statements pick a position somewhere on the edge of the screen for the circle to spawn, out of view by exactly a radius
 		if randint(0, 1) == 0:
@@ -64,7 +66,7 @@ class Circle:
 	def draw(self):
 		pygame.draw.circle(WIN, self.color, (self.x, self.y), self.radius)
 
-	def move(self, mouse):
+	def move(self, mouse, timer):
 		# This moves the circle according to its velocity vector
 		self.x += self.vector[0]
 		self.y += self.vector[1]
@@ -72,6 +74,12 @@ class Circle:
 		# This is the same velocity vector calculation as earlier, so that the circle constantly adjusts its direction to be facing the player
 		distance = ((mouse.x-self.x)**2 + (mouse.y-self.y)**2)**0.5
 		self.vector = [self.speed*(mouse.x-self.x)/distance, self.speed*(mouse.y-self.y)/distance]
+
+		# Here, returning True tells the function from which move() is being run that the circle should die of old age
+		if timer >= self.birth + LIFE_LENGTH*60: # Multiply LIFE_LENGTH by 60 to convert it from seconds into ticks
+			self.radius -= 0.1
+			if self.radius <= 0:
+				return True
 
 		# Here, returning True tells the function from which move() is being run that the circle is offscreen and can now be deleted. This isn't really necesarry but it reduces lag in the case of a bug
 		if self.x < -self.radius or self.x > WIDTH + self.radius:
@@ -170,11 +178,11 @@ def main():
 		# Spawn circles at an average rate of SPAWN_CHANCE circles per second
 		if randint(0, 60)//(SPAWN_CHANCE) == 0: # If a circle should be spawned
 			circle_radius = randint(mouse.radius - CIRCLE_RADIUS_LIMIT, mouse.radius + CIRCLE_RADIUS_LIMIT) # Set the new circle's radius to a random value within CIRCLE_RADIUS_LIMIT of MOUSE_RADIUS
-			circles.append(Circle(circle_radius, mouse)) # Add the new circle to the list of circles, passing it the randomly assigned radius and the position of the mouse (it needs the mouse position to know where to face)
+			circles.append(Circle(circle_radius, mouse, timer)) # Add the new circle to the list of circles, passing it the randomly assigned radius and the position of the mouse (it needs the mouse position to know where to face)
 
 		# Handle circles array, removing circles as needed
 		for circle_index, circle in enumerate(circles):
-			if circle.move(mouse): # If a circle is offscreen, remove it
+			if circle.move(mouse, timer): # If a circle is offscreen, remove it
 				circles.pop(circle_index)
 
 			collision = mouse.collide(circle, since_hit) # Check if a circle has collided with the mouse and if the player is not still within their invincibility frames
@@ -240,8 +248,10 @@ def end_screen(timer):
 			# Allow editing of global variables in order to switch gamemodes
 			global SPAWN_CHANCE
 			global LIVES
+			global SPEED_RANGE
+			global LIFE_LENGTH
 			global GAME_MODE
-			SPAWN_CHANCE, LIVES, GAME_MODE = start_screen() # Difficulty selector
+			SPAWN_CHANCE, LIVES, SPEED_RANGE, LIFE_LENGTH, GAME_MODE = start_screen() # Difficulty selector
 			end_screen(main()) # Restarts game loop after switching difficulties
 
 
@@ -296,15 +306,15 @@ def start_screen():
 			pygame.quit()
 			quit()
 		
-		# Check which gamemode was selected and return the spawn chance, the lives, and the game mode the player should have
+		# Check which gamemode was selected and return SPAWN_CHANCE, LIVES, SPEED_RANGE, LIFE_LENGTH, and GAME_MODE
 		if keys[pygame.K_1]:
-			return 3, 5, 0
+			return 2, 6, [1, 3], 20, 0
 		if keys[pygame.K_2]:
-			return 4, 5, 1
+			return 3.5, 6, [2, 4], 30, 1
 		if keys[pygame.K_3]:
-			return 5, 5, 2
+			return 5, 5, [3, 5], 60, 2
 		if keys[pygame.K_4]:
-			return 4, 1, 3
+			return 4, 1, [3, 5.5], 100, 3
 
-SPAWN_CHANCE, LIVES, GAME_MODE = start_screen() # Render the difficulty selector screen and set the values returned to their corresponding variables
+SPAWN_CHANCE, LIVES, SPEED_RANGE, LIFE_LENGTH, GAME_MODE = start_screen() # Render the difficulty selector screen and set the values returned to their corresponding variables
 end_screen(main()) # Run the main game loop and pass the timer variable it returns into the end screen to display
