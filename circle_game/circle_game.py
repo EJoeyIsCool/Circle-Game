@@ -12,32 +12,36 @@ pygame.font.init() # Initiates the library that allows the code to render text
 SCREEN_INFO = pygame.display.Info()
 WIN = pygame.display.set_mode((0, 0), pygame.FULLSCREEN) # Creates the window the game runs in
 WIDTH, HEIGHT = WIN.get_width(), WIN.get_height() # Gets the width and height of the window in pixels
-TITLE = "Mouse Game"
+TITLE = "Circle Game"
 pygame.display.set_caption(TITLE)
 
-BG_COLOR = (0, 0, 0, 200) # Background color. This has four values, but the fourth value (opacity) only applies for surfaces with the pygame.SRCALPHA tag, such as the ending screen
+BG_COLOR = (0, 0, 0, 230) # Background color. This has four values, but the fourth value (opacity) only applies for surfaces with the pygame.SRCALPHA tag, such as the ending screen
 MOUSE_COLOR = (255, 255, 255) # Mouse color
 
-STARTING_RADIUS = 10 # The initial radius of the mouse
+MOUSE_RADIUS = 10 # The radius of the mouse
 
-STARTING_SPAWN_CHANCE = 5 # At the start of the game, one circle will spawn every second (on average)
-CIRCLE_RADIUS_LIMIT = 5 # A given circles radius is at most this much larger than the player
+SPAWN_CHANCE = 0 # This many circles will spawn every second (on average). Initialized here but will be assigned a value later
+SPEED_RANGE = [3, 5] # The range of speeds (in pixels per second) that a circle can travel at
+CIRCLE_RADIUS_LIMIT = 5 # A given circles radius is at most this much larger or smaller than the player
 
-FONT = pygame.font.SysFont("futura", 45) # How to render text, specifying the font and the text size
-TEXT_COLOR = (240, 240, 240)
+FONT = pygame.font.SysFont("futura", 45) # The font and font size used to render text
+TEXT_COLOR = (240, 240, 240) # The text color
 
-HEART = pygame.transform.scale(pygame.image.load("heart.png"), (45, 45))
-LIVES = 5
+HEART = pygame.transform.scale(pygame.image.load("heart.png"), (45, 45)) # The image used to display heart icons in the top right of the screen
+LIVES = 0 # The number of lives the player has. Initialized here but will be assigned a value later
 
 IFRAMES_DURATION = 6 # The number of ticks after taking damage before the player can lose another heart
 
+HIGH_SCORES = [0, 0, 0, 0] # The player's high scores across different game modes. Initialized here but will be assigned a value later
+GAME_MODE = -1 # The game mode that the player is in. (0 is easy, 1 is medium, 2 is hard, and 3 is hardcore.) Initialized here but will be assigned a value later
 
-# Definining classes for all of the entities needed in the game
 
+
+# Definining the enemy class
 class Circle:
 	def __init__(self, radius, mouse):
 		self.color = (randint(55, 200), randint(55, 200), randint(55, 200)) # Instead of each value ranging from 0-255, these range from 55-200 in order to contrast them against both the mouse and the black background
-		self.speed = random()*2 + 3 # Ranges from 3-5
+		self.speed = random()*(SPEED_RANGE[1]-SPEED_RANGE[0]) + SPEED_RANGE[0] # Covers the SPEED_RANGE, but uses random() instead of randint() to return a float for more diverse possibilities
 		self.radius = radius
 
 		# The following if/else statements pick a position somewhere on the edge of the screen for the circle to spawn, out of view by exactly a radius
@@ -54,14 +58,14 @@ class Circle:
 				self.y = HEIGHT + self.radius
 			self.x = randint(-self.radius, WIDTH + self.radius)
 
-		distance = ((mouse.x-self.x)**2 + (mouse.y-self.y)**2)**0.5
-		self.vector = [self.speed*(mouse.x-self.x)/distance, self.speed*(mouse.y-self.y)/distance] # Points towards the player using the unit distance vector times a randomly assigned speed
+		distance = ((mouse.x-self.x)**2 + (mouse.y-self.y)**2)**0.5 # Calculates the distance between the circle and the mouse
+		self.vector = [self.speed*(mouse.x-self.x)/distance, self.speed*(mouse.y-self.y)/distance] # Points towards the player using the unit distance vector times the circle's speed
 
 	def draw(self):
 		pygame.draw.circle(WIN, self.color, (self.x, self.y), self.radius)
 
 	def move(self, mouse):
-		# This moves the circles according to their velocity vectors
+		# This moves the circle according to its velocity vector
 		self.x += self.vector[0]
 		self.y += self.vector[1]
 		
@@ -69,7 +73,7 @@ class Circle:
 		distance = ((mouse.x-self.x)**2 + (mouse.y-self.y)**2)**0.5
 		self.vector = [self.speed*(mouse.x-self.x)/distance, self.speed*(mouse.y-self.y)/distance]
 
-		# Here, returning True tells the function from which move() is being run that the circle is offscreen and can now be deleted
+		# Here, returning True tells the function from which move() is being run that the circle is offscreen and can now be deleted. This isn't really necesarry but it reduces lag in the case of a bug
 		if self.x < -self.radius or self.x > WIDTH + self.radius:
 			return True
 		if self.y < -self.radius or self.y > HEIGHT + self.radius:
@@ -82,33 +86,35 @@ class Circle:
 
 		# If the distance between the centers is less than the sum of the two circles' radii, we know the circles are overlapping
 		if distance <= radii_sum:
-			return True
-		return False
+			return True # This means that the circle and the mouse are colliding
+		return False # This means that the circle and the mouse are not colliding
 
+# Defining the player class
 class Mouse:
 	def __init__(self):
 		self.x, self.y = 0, 0 # Initialize mouse position variables
-		self.radius = STARTING_RADIUS
-		self.color = MOUSE_COLOR
-		self.lives = LIVES
+		self.radius = MOUSE_RADIUS # Set the mouse radius
+		self.color = MOUSE_COLOR # Set the mouse color
+		self.lives = LIVES # Set the number of lives the player has
 
 	def set_pos(self):
+		# Move the mouse to the player's cursor
 		mouse_coords = pygame.mouse.get_pos()
 		self.x = mouse_coords[0]
 		self.y = mouse_coords[1]
 
 	def draw(self):
-		self.set_pos()
+		self.set_pos() # Update position before drawing to the screen
 		pygame.draw.circle(WIN, self.color, (self.x, self.y), self.radius)
 
 	def collide(self, circle, since_hit):
-		self.set_pos()
+		self.set_pos() # Update position before colliding with a circle
 		if circle.collide(self):
 			if since_hit > IFRAMES_DURATION: # If the player is not within their invincibility frames, they lose a life
 				self.lives -= 1
 			if self.lives <= 0:
-				return "dead"
-			return "pop"
+				return "dead" # Tells the function from which this is being run that the player is dead
+			return "pop" # Tells the function from which this is being run that the player was hit and the colliding circle can now be removed
 		return "" # Return an empty string since we never do anything if no collision occured
 
 
@@ -122,7 +128,7 @@ def draw_screen(mouse, circles, timer):
 		circle.draw()
 
 	if timer: # Check if the game is running and the timer is still active
-		timer_text = FONT.render(f"Time survived:  {round(timer/60, 1)} s", 1, TEXT_COLOR) # The reason the timer is divided by 60 and rounded to the nearest decimal place is because the timer is in ticks
+		timer_text = FONT.render(f"Time survived:  {round(timer/60, 1)} s", 1, TEXT_COLOR) # The timer is in ticks, so we must divde by 60. This value is rounded to look nicer and take up less space
 		WIN.blit(timer_text, (10, 10)) # Places the timer text in the upper-left corner
 
 	# Display the number of lives a player has remaining visually with hearts
@@ -134,7 +140,7 @@ def draw_screen(mouse, circles, timer):
 	pygame.display.update() # Update the screen to show all of the changes made
 
 
-# This function is the game loop
+# This function runs the main game loop
 def main():
 	clock = pygame.time.Clock()
 	
@@ -144,54 +150,65 @@ def main():
 	timer = 0
 	since_hit = 0
 
-	spawn_chance = STARTING_SPAWN_CHANCE
-
 	while True:
-		fps = round(((clock.tick(60) * 60) / 1000) * 60, 2) # Sets the ticks per second to 60. It also measures the actual frames per second (if needed)
+		fps = round(((clock.tick(60) * 60) / 1000) * 60, 2) # Sets the ticks per second to 60. This also measures the actual frames per second (if needed)
 		#print("FPS: ", fps) # If needed for debugging
 		
-		timer += 1
-		since_hit += 1
+		timer += 1 # Increment timer every tick
+		since_hit += 1 # Increment the time since the player was hit every tick
 
-		# If the player wants to close the program, this allows them to
+		# This allows the player to close the program at any time, either by closing it manually or by pressing "q"
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				return
+				pygame.quit()
+				quit()
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_q]:
+			pygame.quit()
+			quit()
 
-		# Spawn circles at an average rate of spawn_chance circles per second
-		if randint(0, 60)//(spawn_chance) == 0:
-			circle_radius = randint(STARTING_RADIUS//2, mouse.radius + CIRCLE_RADIUS_LIMIT)
-			circles.append(Circle(circle_radius, mouse))
+		# Spawn circles at an average rate of SPAWN_CHANCE circles per second
+		if randint(0, 60)//(SPAWN_CHANCE) == 0: # If a circle should be spawned
+			circle_radius = randint(mouse.radius - CIRCLE_RADIUS_LIMIT, mouse.radius + CIRCLE_RADIUS_LIMIT) # Set the new circle's radius to a random value within CIRCLE_RADIUS_LIMIT of MOUSE_RADIUS
+			circles.append(Circle(circle_radius, mouse)) # Add the new circle to the list of circles, passing it the randomly assigned radius and the position of the mouse (it needs the mouse position to know where to face)
 
 		# Handle circles array, removing circles as needed
 		for circle_index, circle in enumerate(circles):
-			if circle.move(mouse):
+			if circle.move(mouse): # If a circle is offscreen, remove it
 				circles.pop(circle_index)
-			collision = mouse.collide(circle, since_hit)
-			if collision == "pop":
-				circles.pop(circle_index)
-				since_hit = 0
+
+			collision = mouse.collide(circle, since_hit) # Check if a circle has collided with the mouse and if the player is not still within their invincibility frames
+			if collision == "pop": # If the player lost a life
+				circles.pop(circle_index) # Remove the colliding circle from the list
+				since_hit = 0 # Reset the time since the player was last hit
 			elif collision == "dead": # If player runs out of hearts, end the script
 				draw_screen(mouse, circles, False) # Renders the screen with no hearts left and no timer
-				return timer # Passes timer to the end screen to display how long the player survived
+				if timer > HIGH_SCORES[GAME_MODE]:
+					HIGH_SCORES[GAME_MODE] = timer # Individual values of the global array HIGH_SCORES may be changed without writing global HIGH_SCORES
+				return timer # Return the amount of time the player survived in order to display it on the end screen
 
 		draw_screen(mouse, circles, timer)
 
 
 # Defining end screen drawing function
 def draw_end_screen(timer):
-	transparent_layer = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-	transparent_layer.fill(BG_COLOR)
-	WIN.blit(transparent_layer, (0, 0))
+	transparent_layer = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) # Creates a semi-transparent layer to display over the screen, showing the circles onscreen when the player died but making it easier to see the end screen text
+	transparent_layer.fill(BG_COLOR) # Fills the semi-transparent layer with the background color
+	WIN.blit(transparent_layer, (0, 0)) # Displays the semi-transparent layer, covering the entire screen by positioning the top left corner at (0, 0)
 
 	end_text = FONT.render(f"You survived {round(timer/60, 1)} seconds!", 1, TEXT_COLOR)
 	end_x = WIDTH/2 - end_text.get_width()/2
-	end_y = HEIGHT/2 - end_text.get_height()/2 - 50
+	end_y = HEIGHT/2 - end_text.get_height()/2 - 75
 	WIN.blit(end_text, (end_x, end_y))
 
-	close_text = FONT.render(f'Press "q" to quit', 1, TEXT_COLOR)
+	record_text = FONT.render(f"Your best time for this gamemode is {round(HIGH_SCORES[GAME_MODE]/60, 1)} seconds!", 1, TEXT_COLOR)
+	record_x = WIDTH/2 - record_text.get_width()/2
+	record_y = HEIGHT/2 - record_text.get_height()/2
+	WIN.blit(record_text, (record_x, record_y))
+
+	close_text = FONT.render(f'Press "r" to restart, "d" for difficulty selector, or "q" to quit', 1, TEXT_COLOR)
 	close_x = WIDTH/2 - close_text.get_width()/2
-	close_y = HEIGHT/2 - close_text.get_height()/2 + 50
+	close_y = HEIGHT/2 - close_text.get_height()/2 + 75
 	WIN.blit(close_text, (close_x, close_y))
 
 	pygame.display.update()
@@ -206,13 +223,27 @@ def end_screen(timer):
 		fps = round(((clock.tick(60) * 60) / 1000) * 60, 2)
 		#print("FPS: ", fps)
 		
+		# This allows the player to close the program at any time, either by closing it manually or by pressing "q"
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				return
-
+				pygame.quit()
+				quit()
 		keys = pygame.key.get_pressed()
-		if keys[pygame.K_q]: # Checks if player presses "q"
-			return # Ends program
+		if keys[pygame.K_q]:
+			pygame.quit()
+			quit()
+
+		if keys[pygame.K_r]: # Checks if player presses "r"
+			end_screen(main()) # Restarts game loop without switching difficulties
+
+		if keys[pygame.K_d]: # Checks if player presses "d"
+			# Allow editing of global variables in order to switch gamemodes
+			global SPAWN_CHANCE
+			global LIVES
+			global GAME_MODE
+			SPAWN_CHANCE, LIVES, GAME_MODE = start_screen() # Difficulty selector
+			end_screen(main()) # Restarts game loop after switching difficulties
+
 
 # Defining start screen drawing function
 def draw_start_screen():
@@ -220,17 +251,32 @@ def draw_start_screen():
 
 	instructions_text = FONT.render(f"Avoid the circles to survive!", 1, TEXT_COLOR)
 	instructions_x = WIDTH/2 - instructions_text.get_width()/2
-	instructions_y = HEIGHT/2 - instructions_text.get_height()/2 - 50
+	instructions_y = HEIGHT/2 - instructions_text.get_height()/2 - 140
 	WIN.blit(instructions_text, (instructions_x, instructions_y))
 
-	start_text = FONT.render(f"Press any key to start...", 1, TEXT_COLOR)
-	start_x = WIDTH/2 - start_text.get_width()/2
-	start_y = HEIGHT/2 - start_text.get_height()/2 + 50
-	WIN.blit(start_text, (start_x, start_y))
+	easy_text = FONT.render(f"Easy: Press 1", 1, TEXT_COLOR)
+	easy_x = WIDTH/2 - easy_text.get_width()/2
+	easy_y = HEIGHT/2 - easy_text.get_height()/2 - 10
+	WIN.blit(easy_text, (easy_x, easy_y))
+
+	medium_text = FONT.render(f"Medium: Press 2", 1, TEXT_COLOR)
+	medium_x = WIDTH/2 - medium_text.get_width()/2
+	medium_y = HEIGHT/2 - medium_text.get_height()/2 + 40
+	WIN.blit(medium_text, (medium_x, medium_y))
+
+	hard_text = FONT.render(f"Hard: Press 3", 1, TEXT_COLOR)
+	hard_x = WIDTH/2 - hard_text.get_width()/2
+	hard_y = HEIGHT/2 - hard_text.get_height()/2 + 90
+	WIN.blit(hard_text, (hard_x, hard_y))
+
+	hardcore_text = FONT.render(f"Hardcore: Press 4", 1, TEXT_COLOR)
+	hardcore_x = WIDTH/2 - hardcore_text.get_width()/2
+	hardcore_y = HEIGHT/2 - hardcore_text.get_height()/2 + 140
+	WIN.blit(hardcore_text, (hardcore_x, hardcore_y))
 
 	pygame.display.update()
 
-# Keeps start screen active until player presses a key and starts game
+# Keeps start screen active until the player chooses a difficulty
 def start_screen():
 	clock = pygame.time.Clock()
 
@@ -240,11 +286,25 @@ def start_screen():
 		fps = round(((clock.tick(60) * 60) / 1000) * 60, 2)
 		#print("FPS: ", fps)
 
+		# This allows the player to close the program at any time, either by closing it manually or by pressing "q"
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				return
-			if event.type == pygame.KEYDOWN:
-				return # Ends the start screen when any key is pressed, starting the main game loop
+				pygame.quit()
+				quit()
+		keys = pygame.key.get_pressed()
+		if keys[pygame.K_q]:
+			pygame.quit()
+			quit()
+		
+		# Check which gamemode was selected and return the spawn chance, the lives, and the game mode the player should have
+		if keys[pygame.K_1]:
+			return 3, 5, 0
+		if keys[pygame.K_2]:
+			return 4, 5, 1
+		if keys[pygame.K_3]:
+			return 5, 5, 2
+		if keys[pygame.K_4]:
+			return 4, 1, 3
 
-start_screen() # Render the start screen
-end_screen(main()) # Run the main game loop, then pass the timer value returned into the end screen function to display time survived
+SPAWN_CHANCE, LIVES, GAME_MODE = start_screen() # Render the difficulty selector screen and set the values returned to their corresponding variables
+end_screen(main()) # Run the main game loop and pass the timer variable it returns into the end screen to display
