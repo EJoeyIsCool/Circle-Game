@@ -29,7 +29,7 @@ TEXT_COLOR = (240, 240, 240)
 HEART = pygame.transform.scale(pygame.image.load("heart.png"), (45, 45))
 LIVES = 5
 
-IFRAMES_DURATION = 3 # The number of ticks after taking damage before the player can lose another heart
+IFRAMES_DURATION = 6 # The number of ticks after taking damage before the player can lose another heart
 
 
 # Definining classes for all of the entities needed in the game
