@@ -2,8 +2,7 @@
 
 import pygame
 import os
-from random import randint
-from random import random
+from random import randint, random
 import math
 os.chdir(os.path.dirname(os.path.abspath(__file__))) # Allows referencing other files within the same folder without specifying the exact path to the file
 pygame.init() # Initiates pygame
