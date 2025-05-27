@@ -1,4 +1,7 @@
-# Circle-Game
-This program was coded in PyGame. Use your mouse to avoid the circles hunting you down!
+Make sure to have PyGame installed before playing, otherwise these programs will fail to run. Also, make sure to download the entire folders since some of the code uses assets.
 
-Make sure to have PyGame installed before playing, otherwise the program will fail to run. Also, make sure to run the program such that the heart asset is in the same folder as the game file so that it displays properly.
+# Platformer
+Use the arrow keys to explore the levels and experience the movement and collision physics. Experiment with the level builder to create your own levels.
+
+# Circle Game
+Use your mouse to avoid the circles hunting you down. Try to get new high scores on one of the four gamemodes.
