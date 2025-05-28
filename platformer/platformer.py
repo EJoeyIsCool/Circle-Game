@@ -26,11 +26,11 @@ TILE_2 = load("tile_2") # Loads the second tile image
 BG_TILE = load("bg_tile") # Loads the tile used as the blue background
 
 PLAYER_COLOR = (255, 20, 147) # Sets the player color
-PLAYER_TO_TILE_X, PLAYER_TO_TILE_Y = 1.3, 2 # Sets the player width and height ratio compared to the size of a tile
+PLAYER_TO_TILE_X, PLAYER_TO_TILE_Y = 1.3, 1.99 # Sets the player width and height ratio compared to the size of a tile
 RUN_PEAK = WIDTH/200 # The maximum speed (in pixels per tick) of the player horizontally
 SPRINT_PEAK = WIDTH/150 # The maximum speed (in pixels per tick) of the player vertically
 DIRECTION_SWAP_SPEED = WIDTH/575 # The rate at which the player accelerates when changing directions
-JUMP_HEIGHT = HEIGHT/55 # The jump strength of the player
+JUMP_HEIGHT = HEIGHT/57 # The jump strength of the player
 
 
 # Creating a tile object for the background and the ground
